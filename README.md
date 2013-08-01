@@ -14,7 +14,7 @@
    ```sh
    pip install vial
    ```
-   
+
 ### Manual
 
 1. Clone the **vial** repository to your local computer.
@@ -43,6 +43,46 @@
    # the unit test suite.
    pip install ".[test]"
    ```
+
+## Usage
+
+The session object is a standard mutable mapping with a few additional methods to facilitate a session.
+
+#### Establish a new session
+
+```python
+>>> import vial
+
+# By default the session connects to redis on `localhost:6379`.
+>>> session = vial.Session(host='localhost', port=9001)
+>>> session.id
+None
+
+>>> session.save()
+>>> session.id
+'8379fh98302hf8hg8hrligh908h490nvn9gn389tb038n'
+
+# Add some more values to the session.
+>>> session['color'] = 'blue'
+>>> session.save()
+
+# Fetch the session and check the value.
+>>> vial.Session(id=session.id)['color']
+'blue'
+```
+
+#### Retrieve an existing session
+
+This will create the session object bound to the passed identifier.
+
+```python
+>>> import vial
+>>> session = vial.Session(id='8379fh98302hf8hg8hrligh908h490nvn9gn389tb038n')
+
+# This will identify if the session is persisted in redis
+>>> session.is_new
+False
+```
 
 ## Contributing
 
