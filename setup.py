@@ -8,11 +8,11 @@ from pkgutil import get_importer
 BASE_DIR = path.abspath(path.dirname(__file__))
 
 # Navigate, import, and retrieve the metadata of the project.
-_imp = get_importer(path.join(BASE_DIR, 'src', 'alchemist'))
+_imp = get_importer(path.join(BASE_DIR, 'src', 'vial'))
 meta = _imp.find_module('meta').load_module('meta')
 
 setup(
-    name='alchemist',
+    name='vial',
     version=meta.version,
     description=meta.description,
     classifiers=[
@@ -33,4 +33,16 @@ setup(
         # <https://github.com/andymccurdy/redis-py>
         'redis',
     ),
+    extras_require={
+        'test': (
+            # Test runner.
+            'pytest',
+
+            # Ensure PEP8 conformance.
+            'pytest-pep8',
+
+            # Ensure test coverage.
+            'pytest-cov',
+        )
+    }
 )
