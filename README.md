@@ -5,6 +5,80 @@
 ![PyPi Downloads](https://pypip.in/d/vial/badge.png)
 > A session store backed by redis.
 
+## Installation
+
+### Automated
+
+1. **Vial** can be installed using `pip` or `easy_install`.
+
+   ```sh
+   pip install vial
+   ```
+   
+### Manual
+
+1. Clone the **vial** repository to your local computer.
+
+   ```sh
+   git clone git://github.com/vial/python-vial.git
+   ```
+
+2. Change into the **vial** root directory.
+
+   ```sh
+   cd /path/to/python-vial
+   ```
+
+3. Install the project and all its dependencies using `pip`.
+
+   ```sh
+   pip install .
+   ```
+
+   Additional *extra* requirements may be specified in brackets following
+   the `.`.
+
+   ```sh
+   # Install vial as well as the additional dependencies to use
+   # the unit test suite.
+   pip install ".[test]"
+   ```
+
+## Contributing
+
+### Setting up your environment
+1. Follow steps 1 and 2 of the [manual installation instructions][].
+
+[manual installation instructions]: #manual
+
+2. Initialize a virtual environment to develop in. This is done so as to ensure every contributor is working with close-to-identicial versions of packages.
+
+   ```sh
+   mkvirtualenv vial
+   ```
+
+   The `mkvirtualenv` command is available from `virtualenvwrapper` which can be installed as follows:
+
+   ```sh
+   pip install virtualenvwrapper
+   ```
+
+3. Install **vial** in development mode with testing enabled. This will download all dependencies required for running the unit tests.
+
+   ```sh
+   pip install -e ".[test]"
+   ```
+
+### Running the test suite
+1. [Set up your environment](#setting-up-your-environment).
+
+2. Run the unit tests.
+
+   ```sh
+   py.test
+   ```
+
+
 ## License
 
 Unless otherwise noted, all files contained within this project are liensed under the MIT opensource license. See the included file LICENSE or visit [opensource.org][] for more information.
