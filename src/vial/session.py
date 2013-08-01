@@ -139,18 +139,20 @@ class Session(collections.MutableMapping):
 
         # Check the internal cache for the name.
         if name in self._cache:
-            return self._cache[name]
+            value = self._cache[name]
 
-        # Retrieve the name from redis.
-        value = self._connection.hget(self._key, name)
-
-        if value is not None:
-            # Ensure values are strings.
-            if isinstance(value, bytes):
-                value = value.decode('utf8')
+        else:
+            # Retrieve the name from redis.
+            value = self._connection.hget(self._key, name)
+            if value is None:
+                raise KeyError
 
             # Store the value in the cache.
             self._cache[name] = value
+
+        # Ensure values are strings.
+        if isinstance(value, bytes):
+            value = value.decode('utf8')
 
         # Return our value.
         return value
