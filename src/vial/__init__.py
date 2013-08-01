@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
 from .meta import version as __version__, description
-from . import session
+from .session import Session, UserSession
 import redis
 
 # Set the package docstring to the metadata description.
@@ -9,7 +9,9 @@ sys.modules[__package__].__doc__ = description
 
 # Expose named attributes.
 __all__ = [
-    'Vial'
+    'Vial',
+    'Session',
+    'UserSession'
 ]
 
 
@@ -33,23 +35,23 @@ class Vial:
     def Session(self, *args, **kwargs):
         kwargs.setdefault('namespace', self._namespace)
         kwargs['connection'] = self._connection
-        return session.Session(*args, **kwargs)
+        return Session(*args, **kwargs)
 
     def UserSession(self, *args, **kwargs):
         kwargs.setdefault('namespace', self._namespace)
         kwargs['connection'] = self._connection
-        return session.UserSession(*args, **kwargs)
+        return UserSession(*args, **kwargs)
 
     def get_for_user(self, user):
         """Retrieve all session ids bound to this user."""
-        text = session.UserSession._build_user_key(self._namespace, user)
+        text = UserSession._build_user_key(self._namespace, user)
         members = self._connection.smembers(text)
         for key in members:
             yield key.split(b':', 2)[-1]
 
     def delete_for_user(self, user):
         """Delete all sessions bound to this user."""
-        key = session.UserSession._build_user_key(self._namespace, user)
+        key = UserSession._build_user_key(self._namespace, user)
         members = self._connection.smembers(key)
 
         # Remove all sessions.

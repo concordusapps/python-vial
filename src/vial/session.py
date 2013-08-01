@@ -213,6 +213,9 @@ class UserSession(Session):
         #! The key of the user's session in redis.
         self._user_key = None
 
+        #! Previous user key.
+        self._old_user = None
+
         # Set the user if we were given one.
         if user is not None:
             self.user = user
@@ -231,9 +234,7 @@ class UserSession(Session):
         """Set the user for the session."""
         old = self.user
         if not self.is_new and old:
-            # Remove this session identifier from the previous user.
-            key = self._build_user_key(self._namespace, old)
-            self._connection.srem(key, self._key)
+            self._old_user = old
 
         # Build the user key.
         self._user_key = self._build_user_key(self._namespace, value)
@@ -246,6 +247,11 @@ class UserSession(Session):
         super().save()
 
         if self._user_key:
+            # Remove this session identifier from the previous user.
+            if self._old_user:
+                key = self._build_user_key(self._namespace, self._old_user)
+                self._connection.srem(key, self._key)
+
             # Append this session identifier as a session for the user.
             self._connection.sadd(self._user_key, self._key)
 

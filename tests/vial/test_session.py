@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from vial import Vial
+from vial import Vial, Session
 import redis
 
 
@@ -8,6 +8,12 @@ class TestSession:
     def setup(self):
         self.connection = redis.StrictRedis()
         self.vial = Vial()
+
+    def test_direct_new(self):
+        session = Session()
+
+        assert b'_created' in session._cache
+        assert b'_accessed' in session._cache
 
     def test_new(self):
         session = self.vial.Session()
@@ -172,6 +178,31 @@ class TestUserSession:
 
         assert session.get('_user_id') == '12345'
 
+    def test_store_and_fetch_user_inline(self):
+        session = self.vial.UserSession(user='12345')
+        session.save()
+
+        session = self.vial.UserSession(id=session.id)
+
+        assert session.get('_user_id') == '12345'
+
+    def test_change_user(self):
+        session = self.vial.UserSession(user='12345')
+        session.save()
+
+        sessions = list(self.vial.get_for_user('12345'))
+        assert session.id in sessions
+
+        session.user = '23456'
+
+        sessions = list(self.vial.get_for_user('12345'))
+        assert session.id in sessions
+
+        session.save()
+
+        sessions = list(self.vial.get_for_user('12345'))
+        assert session.id not in sessions
+
     def test_expire_no_user_session(self):
         session = self.vial.UserSession()
         session.save()
@@ -186,6 +217,21 @@ class TestUserSession:
 
         expires = self.connection.ttl(session._key)
         assert expires <= (60 * 60 * 24 * 7)
+
+    def test_no_expire_session(self):
+        session = self.vial.UserSession(expires=False)
+        session.save()
+
+        expires = self.connection.ttl(session._key)
+        assert expires == -1
+
+    def test_no_expire_user_session(self):
+        session = self.vial.UserSession(user_expires=False)
+        session.user = '12345'
+        session.save()
+
+        expires = self.connection.ttl(session._key)
+        assert expires == -1
 
     def test_get_all_by_user(self):
         session1 = self.vial.UserSession()
