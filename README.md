@@ -51,10 +51,12 @@ The session object is a standard mutable mapping with a few additional methods t
 #### Establish a new session
 
 ```python
->>> import vial
+>>> from vial import Vial
 
 # By default the session connects to redis on `localhost:6379`.
->>> session = vial.Session(host='localhost', port=9001)
+>>> vial = Vial(host='localhost', port=9001)
+
+>>> session = vial.Session()
 >>> session.id
 None
 
@@ -76,7 +78,8 @@ None
 This will create the session object bound to the passed identifier.
 
 ```python
->>> import vial
+>>> from vial import Vial
+>>> vial = Vial()
 >>> session = vial.Session(id='8379fh98302hf8hg8hrligh908h490nvn9gn389tb038n')
 
 # This will identify if the session is persisted in redis

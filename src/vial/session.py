@@ -11,9 +11,10 @@ class Session(collections.MutableMapping):
 
     def __init__(self, id=None,
                  host='localhost', port=6379, db=0, namespace=None,
+                 connection=None,
                  expires=timedelta(days=1),
                  key_length=256):
-        """Initialize a session store backed by redis.
+        """Initialize a session object backed by redis.
 
         @param[in] key Optional session key to retrieve the session from.
         @param[in] host Hostname to access the redis server.
@@ -28,7 +29,9 @@ class Session(collections.MutableMapping):
         self._cache = {}
 
         #! The connection to redis.
-        self._connection = redis.StrictRedis(host=host, port=port, db=db)
+        self._connection = connection
+        if connection is None:
+            self._connection = redis.StrictRedis(host=host, port=port, db=db)
 
         #! Time length to set the sessions to expire at.
         #! Set to False to never have sessions expire.
@@ -49,7 +52,7 @@ class Session(collections.MutableMapping):
             self.id = id
 
             # Build the redis format string for the session.
-            self._key = self._build_session_key(id)
+            self._key = self._build_session_key(self._namespace, id)
 
             # Check if the session already exists.
             self._new = not self._connection.exists(self._key)
@@ -90,7 +93,7 @@ class Session(collections.MutableMapping):
                 self.id = urlsafe_b64encode(os.urandom(self._key_length))
 
                 # Build the redis format string for the session.
-                self._key = self._build_session_key(self.id)
+                self._key = self._build_session_key(self._namespace, self.id)
 
                 # Test if its new.
                 loop = self._connection.exists(self._key)
@@ -111,14 +114,22 @@ class Session(collections.MutableMapping):
         # Refresh the session.
         self.refresh()
 
-    def _build_key(self, name, id):
-        if self._namespace:
-            return '%s:%s:%s' % (self._namespace, name, id)
+    @classmethod
+    def _build_key(cls, namespace, name, id):
+        if isinstance(id, bytes):
+            id = id.decode('utf8')
 
-        return '%s:%s' % (name, id)
+        if namespace:
+            key = '%s:%s:%s' % (namespace, name, id)
 
-    def _build_session_key(self, id):
-        return self._build_key('session', id)
+        else:
+            key = '%s:%s' % (name, id)
+
+        return key.encode('utf8')
+
+    @classmethod
+    def _build_session_key(cls, namespace, id):
+        return cls._build_key(namespace, 'session', id)
 
     def __getitem__(self, name):
         """Get a named value from the session."""
@@ -183,3 +194,71 @@ class Session(collections.MutableMapping):
 
         # Return the number of named values.
         return iter(self._cache)
+
+
+class UserSession(Session):
+
+    def __init__(self, id=None, user=None, user_expires=timedelta(days=1),
+                 **kwargs):
+        """Initialize a user session object backed by redis."""
+        #! Time length to set the sessions to expire at for users..
+        #! Set to False to never have sessions expire for users.
+        self._user_expires = user_expires
+
+        # Initialize the base session object.
+        super().__init__(id=id, **kwargs)
+
+        #! The key of the user's session in redis.
+        self._user_key = None
+
+        # Set the user if we were given one.
+        if user is not None:
+            self.user = user
+
+    @classmethod
+    def _build_user_key(cls, namespace, id):
+        return cls._build_key(namespace, 'user', id)
+
+    @property
+    def user(self):
+        """Get the user identifier stored in the session."""
+        return self.get('_user_id', None)
+
+    @user.setter
+    def user(self, value):
+        """Set the user for the session."""
+        old = self.user
+        if not self.is_new and old:
+            # Remove this session identifier from the previous user.
+            key = self._build_user_key(self._namespace, old)
+            self._connection.srem(key, self._key)
+
+        # Build the user key.
+        self._user_key = self._build_user_key(self._namespace, value)
+
+        # Set the user identifier in the session.
+        self['_user_id'] = value
+
+    def save(self):
+        # Persist the session object.
+        super().save()
+
+        if self._user_key:
+            # Append this session identifier as a session for the user.
+            self._connection.sadd(self._user_key, self._key)
+
+    def refresh(self):
+        """Refresh the session expiration time.
+
+        The session expiration time is affected by whether this session
+        is bound to a user or not.
+        """
+        if self.user is None:
+            super().refresh()
+
+        else:
+            if self._user_expires:
+                self._connection.expire(self._key, self._user_expires)
+
+            else:
+                self._connection.persist(self._key)
